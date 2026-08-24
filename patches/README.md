@@ -1,26 +1,49 @@
-# Accessibility patches for Telegram Android (TalkBack)
+# Telegram Accessible — patch set
 
-| # | Feature | File(s) |
-|---|---------|--------|
-| 01 | Chat list: name first, then type | DialogCell.java |
-| 02 | Hide Share button between messages | ChatMessageCell.java |
-| 03 | Announce upload/download percent | ChatMessageCell.java + strings |
-| 04 | Label unlabeled buttons | A11y helper + various views |
-| 05 | **Forward without quote as separate option** | ChatActivity.java + SendMessagesHelper.java |
+Drop all `.patch` files from this folder into your fork's `patches/` directory
+(replacing any older/superseded ones — see notes below), commit, and run the
+`Build APK` GitHub Action.
 
-## 05 note (important)
+## Included patches
 
-«فوروارد بدون نقل‌قول» یک **گزینهٔ جدا** است، نه جایگزین فوروارد عادی:
+- **01-dialogcell-name-then-type.patch** — Chat list rows: TalkBack now
+  announces the chat name before its type ("shamloo. Channel." instead of
+  "Channel. shamloo.").
 
-- منوی long-press / ActionMode دو آیتم دارد:
-  - Forward (عادی)
-  - Forward without quote
-- فقط دومی `drop_author = true` می‌فرستد.
+- **03-progress-announce-and-share.patch** — Two changes to
+  `ChatMessageCell.java`:
+  - The small "Share" icon drawn directly on message bubbles is hidden
+    (the Share option in the long-press message menu is untouched).
+  - Upload/download progress is announced to TalkBack every 5%.
 
-جزئیات کامل در `05-forward-without-quote.md`.
+- **04-comment-and-reactions.patch** — Two changes to `ChatActivity.java`:
+  - The on-bubble "Leave a Comment" button is hidden; a "Leave a Comment"
+    entry is added to the long-press message menu instead.
+  - A new "Reactions" entry is added at the top of the long-press message
+    menu; tapping it reveals the reactions row (hidden by default instead
+    of always being a focusable row).
+  - **Known risk:** this patch uses three resource names
+    (`R.string.Reactions`, `R.string.LeaveAComment`, `R.drawable.msg_reactions2`)
+    that could not be confirmed against the actual strings/drawables files.
+    If the build fails with "cannot find symbol" for any of these, send the
+    exact error back and it's a quick fix.
 
-## Applying
+- **06-voice-quality-native.patch** / **06-voice-quality-java.patch** —
+  Adds an adjustable voice-message recording quality (low/medium/high
+  bitrate) to `TMessagesProj/jni/audio.c` and
+  `TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java`.
+  **Apply both together** — they're two halves of one feature.
+  **Not yet done:** there's no settings-screen toggle yet for the user to
+  actually pick low/medium/high — the setting is read from
+  `voiceRecordQuality` (0/1/2) in the app's global preferences, defaulting
+  to 2 (high, i.e. today's original behavior) if never set. A follow-up
+  patch is needed to add a real UI control for this once the relevant
+  settings-screen file is available.
 
-- Markdown files = human instructions.
-- `*.patch` files are applied by the GitHub Actions workflow when present.
-- Because Telegram’s ChatActivity is huge and line numbers drift, for 05 the CI also does a best-effort sed inject of the static flag + SendMessagesHelper change. Full menu items still need the documented edits (or a fresh unified diff against the exact commit you build).
+## Superseded — do NOT use these older patches if you still have them
+
+- `02-hide-share-button.patch` — removed Share from the long-press menu,
+  which is not what was wanted; replaced by the on-bubble-only fix in
+  03-progress-announce-and-share.patch.
+- `05-hide-onbubble-share.patch` — its content is now included inside
+  03-progress-announce-and-share.patch.
