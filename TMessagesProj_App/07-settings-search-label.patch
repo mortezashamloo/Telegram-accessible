@@ -1,0 +1,10 @@
+--- a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java
+@@ -334,6 +334,7 @@
+             }
+         });
+         searchItem.setSearchFieldHint(getString(R.string.Search));
++        searchItem.setContentDescription(getString(R.string.Search)); // Accessibility: was unlabeled
+ 
+         otherItem = menu.addItem(1, R.drawable.ic_ab_other);
+         otherItem.setContentDescription(getString(R.string.AccDescrMoreOptions));
