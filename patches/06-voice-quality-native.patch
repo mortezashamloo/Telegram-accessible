@@ -1,0 +1,37 @@
+--- a/TMessagesProj/jni/audio.c
++++ b/TMessagesProj/jni/audio.c
+@@ -221,7 +221,10 @@
+     return written;
+ }
+ 
+-const opus_int32 bitrate = OPUS_BITRATE_MAX;
++// Accessibility/user setting: was `const opus_int32 bitrate = OPUS_BITRATE_MAX;`.
++// Made mutable so voice-message quality can be chosen from the app (low/medium/high)
++// via setVoiceRecordQuality() below, instead of always recording at max bitrate.
++opus_int32 bitrate = OPUS_BITRATE_MAX;
+ const opus_int32 frame_size = 960;
+ const int with_cvbr = 1;
+ const int max_ogg_delay = 0;
+@@ -513,6 +516,22 @@
+     return 1;
+ }
+ 
++JNIEXPORT void Java_org_telegram_messenger_MediaController_setVoiceRecordQuality(JNIEnv *env, jclass class, jint quality) {
++    // 0 = low, 1 = medium, 2 = high (default/original behavior)
++    switch (quality) {
++        case 0:
++            bitrate = 16000;
++            break;
++        case 1:
++            bitrate = 32000;
++            break;
++        case 2:
++        default:
++            bitrate = OPUS_BITRATE_MAX;
++            break;
++    }
++}
++
+ JNIEXPORT jint Java_org_telegram_messenger_MediaController_startRecord(JNIEnv *env, jclass class, jstring path, jint sampleRate) {
+     const char *pathStr = (*env)->GetStringUTFChars(env, path, 0);
+ 
