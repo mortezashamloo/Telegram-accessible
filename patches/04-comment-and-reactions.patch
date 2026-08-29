@@ -1,23 +1,48 @@
 --- a/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
 +++ b/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
-@@ -1038,6 +1038,7 @@
+@@ -1038,6 +1038,8 @@
      private boolean scrimPopupWindowHideDimOnDismiss = true;
      private int scrimPopupX, scrimPopupY;
      private ActionBarMenuSubItem[] scrimPopupWindowItems;
 +    private int accessibilityReactionsToggleIndex = -1; // Accessibility: index of the "Reactions" item in scrimPopupWindowItems, or -1
++    private int accessibilitySelectedMessagePosition = -1; // Accessibility: adapter position to select via the "Select" menu item
      private ActionBarMenuSubItem menuDeleteItem;
      private final Runnable updateDeleteItemRunnable = new Runnable() {
          @Override
-@@ -1248,6 +1249,8 @@
+@@ -1248,6 +1250,9 @@
  
      public final static int OPTION_VIEW_STATISTICS = 115;
      public final static int OPTION_WELCOME_REVERT = 116;
 +    public final static int OPTION_LEAVE_COMMENT = 120; // Accessibility: moved from the on-bubble comment button
 +    public final static int OPTION_TOGGLE_REACTIONS_ROW = 121; // Accessibility: reveals the reactions row instead of it always being focusable
++    public final static int OPTION_SELECT_MESSAGE = 122; // Accessibility: enters selection mode from inside the message menu
  
      private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
              NotificationCenter.messagesRead,
-@@ -31775,6 +31778,15 @@
+@@ -1714,10 +1719,10 @@
+                 }
+                 processRowSelect(view, outside, x, y);
+             }
+-            if (view instanceof ChatMessageCell && (((ChatMessageCell) view).getMessageObject() != null && ((ChatMessageCell) view).getMessageObject().type != MessageObject.TYPE_JOINED_CHANNEL)) {
+-                startMultiselect(position);
+-                result = true;
+-            }
++            // Accessibility: previously this unconditionally called
++            // startMultiselect(position) after createMenu(...) above, which
++            // immediately exited the menu into selection mode. Selection is
++            // now only triggered from the "Select" item inside the menu.
+             return result;
+         }
+     };
+@@ -30911,6 +30916,7 @@
+             } else if (type >= 0 || type == -1 && single && (message.isSending() || message.isEditing()) && currentEncryptedChat == null) {
+                 selectedObject = message;
+                 selectedObjectGroup = groupedMessages;
++                accessibilitySelectedMessagePosition = chatListView != null ? chatListView.getChildAdapterPosition(v) : -1;
+                 fillMessageMenu(primaryMessage, icons, items, options);
+             }
+ 
+@@ -31775,6 +31781,21 @@
                          popupLayout.addView(new ActionBarPopupWindow.GapView(contentView.getContext(), themeDelegate), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 8));
                      }
                  }
@@ -25,15 +50,21 @@
 +                if (isReactionsAvailableFinal) {
 +                    // Accessibility: put reactions behind a menu item instead of
 +                    // an always-visible, always-focusable row above the menu.
-+                    items.add(0, LocaleController.getString(R.string.Reactions));
-+                    icons.add(0, R.drawable.msg_reactions2);
-+                    options.add(0, OPTION_TOGGLE_REACTIONS_ROW);
-+                    accessibilityReactionsToggleIndex = 0;
++                    // Placed at the end of the list per feedback.
++                    items.add(LocaleController.getString(R.string.Reactions));
++                    icons.add(R.drawable.msg_reactions2);
++                    options.add(OPTION_TOGGLE_REACTIONS_ROW);
++                    accessibilityReactionsToggleIndex = items.size() - 1;
 +                }
++                // Accessibility: selection is now only triggered from here,
++                // since long-press no longer auto-enters selection mode.
++                items.add(LocaleController.getString(R.string.Select));
++                icons.add(R.drawable.msg_select);
++                options.add(OPTION_SELECT_MESSAGE);
                  scrimPopupWindowItems = new ActionBarMenuSubItem[items.size()];
                  for (int a = 0, N = items.size(); a < N; a++) {
                      final Integer option = options.get(a);
-@@ -32129,6 +32141,21 @@
+@@ -32129,6 +32150,21 @@
                      LinearLayout.LayoutParams params = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, (int) (52 + reactionsLayout.getTopOffset() / AndroidUtilities.density + pad), Gravity.RIGHT, 0, 50, 0, -20);
                      scrimPopupContainerLayout.addView(reactionsLayout, params);
                      scrimPopupContainerLayout.setReactionsLayout(reactionsLayout);
@@ -55,10 +86,16 @@
                      scrimPopupContainerLayout.setClipChildren(false);
                      MessageObject messageWithReactions = message;
                      MessageObject.GroupedMessages group = getValidGroupedMessage(message);
-@@ -33472,6 +33499,20 @@
+@@ -33472,6 +33508,26 @@
                  }
                  break;
              }
++            case OPTION_SELECT_MESSAGE: {
++                if (accessibilitySelectedMessagePosition >= 0) {
++                    startMultiselect(accessibilitySelectedMessagePosition);
++                }
++                break;
++            }
 +            case OPTION_LEAVE_COMMENT: {
 +                MessageObject message = selectedObject;
 +                int maxReadId;
@@ -76,7 +113,20 @@
              case OPTION_SHARE: {
                  String path = selectedObject.messageOwner.attachPath;
                  if (path != null && path.length() > 0) {
-@@ -45645,6 +45686,18 @@
+@@ -40605,8 +40661,11 @@
+ 
+         @Override
+         public void didLongPress(ChatMessageCell cell, float x, float y) {
++            // Accessibility: previously this also called startMultiselect(...)
++            // right after createMenu(...), which immediately dismissed the
++            // just-opened message options menu. Long-press now only opens
++            // the menu; selection is triggered from a "Select" item inside it.
+             createMenu(cell, false, false, x, y, false);
+-            startMultiselect(chatListView.getChildAdapterPosition(cell));
+         }
+ 
+         @Override
+@@ -45645,6 +45704,18 @@
          final boolean isEphemeral = message.isEphemeral();
          final boolean isEphemeralFromBot = isEphemeral && !message.isOut();
  
