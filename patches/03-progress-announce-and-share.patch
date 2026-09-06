@@ -17,14 +17,30 @@
          if (attachedToWindow && !frozen) {
              setMessageContent(messageObject, groupedMessages, bottomNear, topNear, firstInChat, lastInChatList);
          } else {
-@@ -18286,6 +18287,29 @@
+@@ -18286,6 +18287,45 @@
          createLoadingProgressLayout(uploadedSize, totalSize);
      }
  
 +    private int lastAnnouncedProgressPercent = -1;
++    private boolean hasAccessibilityFocus = false;
++
++    @Override
++    public void sendAccessibilityEvent(int eventType) {
++        super.sendAccessibilityEvent(eventType);
++        if (eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED) {
++            hasAccessibilityFocus = true;
++            lastAnnouncedProgressPercent = -1; // announce fresh as soon as we arrive here
++        } else if (eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED) {
++            hasAccessibilityFocus = false;
++        }
++    }
 +
 +    private void announceLoadingProgress(int percent) {
 +        if (percent < 0 || percent > 100) {
++            return;
++        }
++        if (!hasAccessibilityFocus) {
++            // Not the message TalkBack is currently on -- stay silent for it.
 +            return;
 +        }
 +        // Throttle to every 5% (plus 100%) so TalkBack isn't overwhelmed.
@@ -47,7 +63,7 @@
      private void createLoadingProgressLayout(TLRPC.Document document) {
          if (document == null) {
              return;
-@@ -18309,6 +18333,11 @@
+@@ -18309,6 +18349,11 @@
          }
          loadingProgressLayoutHash = hash;
  
@@ -59,7 +75,7 @@
          if (lastLoadingSizeTotal == 0) {
              lastLoadingSizeTotal = totalSize;
          } else {
-@@ -18646,17 +18675,10 @@
+@@ -18646,17 +18691,10 @@
      }
  
      protected boolean checkNeedDrawShareButton(MessageObject messageObject) {
@@ -81,3 +97,16 @@
      }
  
      public boolean isInsideBackground(float x, float y) {
+@@ -27847,6 +27885,12 @@
+         @Override
+         public boolean performAction(int virtualViewId, int action, Bundle arguments) {
+             if (virtualViewId == HOST_VIEW_ID) {
++                if (action == AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS) {
++                    hasAccessibilityFocus = true;
++                    lastAnnouncedProgressPercent = -1; // announce fresh as soon as we arrive here
++                } else if (action == AccessibilityNodeInfo.ACTION_CLEAR_ACCESSIBILITY_FOCUS) {
++                    hasAccessibilityFocus = false;
++                }
+                 performAccessibilityAction(action, arguments);
+             } else {
+                 if (action == AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS) {

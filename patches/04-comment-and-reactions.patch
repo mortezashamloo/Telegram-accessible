@@ -1,6 +1,14 @@
 --- a/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
 +++ b/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
-@@ -1038,6 +1038,8 @@
+@@ -390,6 +390,7 @@
+ 
+     public boolean justCreatedTopic = false;
+     public boolean justCreatedChat = false;
++    public static boolean IS_FORWARD_NO_QUOTE = false; // a11y-fork: set true right before forwarding to omit the "Forwarded from" quote
+     protected TLRPC.Chat currentChat;
+     protected TLRPC.User currentUser;
+     protected TLRPC.EncryptedChat currentEncryptedChat;
+@@ -1038,6 +1039,8 @@
      private boolean scrimPopupWindowHideDimOnDismiss = true;
      private int scrimPopupX, scrimPopupY;
      private ActionBarMenuSubItem[] scrimPopupWindowItems;
@@ -9,17 +17,19 @@
      private ActionBarMenuSubItem menuDeleteItem;
      private final Runnable updateDeleteItemRunnable = new Runnable() {
          @Override
-@@ -1248,6 +1250,9 @@
+@@ -1248,6 +1251,11 @@
  
      public final static int OPTION_VIEW_STATISTICS = 115;
      public final static int OPTION_WELCOME_REVERT = 116;
 +    public final static int OPTION_LEAVE_COMMENT = 120; // Accessibility: moved from the on-bubble comment button
 +    public final static int OPTION_TOGGLE_REACTIONS_ROW = 121; // Accessibility: reveals the reactions row instead of it always being focusable
 +    public final static int OPTION_SELECT_MESSAGE = 122; // Accessibility: enters selection mode from inside the message menu
++    public final static int OPTION_FORWARD_TO_SAVED = 123; // Accessibility: one-tap forward to Saved Messages
++    public final static int OPTION_FORWARD_NO_QUOTE = 124; // Accessibility: forward while omitting the "Forwarded from" quote
  
      private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
              NotificationCenter.messagesRead,
-@@ -1714,10 +1719,10 @@
+@@ -1714,10 +1722,10 @@
                  }
                  processRowSelect(view, outside, x, y);
              }
@@ -34,7 +44,7 @@
              return result;
          }
      };
-@@ -30911,6 +30916,7 @@
+@@ -30911,6 +30919,7 @@
              } else if (type >= 0 || type == -1 && single && (message.isSending() || message.isEditing()) && currentEncryptedChat == null) {
                  selectedObject = message;
                  selectedObjectGroup = groupedMessages;
@@ -42,7 +52,7 @@
                  fillMessageMenu(primaryMessage, icons, items, options);
              }
  
-@@ -31775,6 +31781,21 @@
+@@ -31775,6 +31784,21 @@
                          popupLayout.addView(new ActionBarPopupWindow.GapView(contentView.getContext(), themeDelegate), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 8));
                      }
                  }
@@ -64,7 +74,7 @@
                  scrimPopupWindowItems = new ActionBarMenuSubItem[items.size()];
                  for (int a = 0, N = items.size(); a < N; a++) {
                      final Integer option = options.get(a);
-@@ -32129,6 +32150,21 @@
+@@ -32129,6 +32153,21 @@
                      LinearLayout.LayoutParams params = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, (int) (52 + reactionsLayout.getTopOffset() / AndroidUtilities.density + pad), Gravity.RIGHT, 0, 50, 0, -20);
                      scrimPopupContainerLayout.addView(reactionsLayout, params);
                      scrimPopupContainerLayout.setReactionsLayout(reactionsLayout);
@@ -86,10 +96,62 @@
                      scrimPopupContainerLayout.setClipChildren(false);
                      MessageObject messageWithReactions = message;
                      MessageObject.GroupedMessages group = getValidGroupedMessage(message);
-@@ -33472,6 +33508,26 @@
+@@ -33308,6 +33347,32 @@
+                 createDeleteMessagesAlert(selectedObject, selectedObjectGroup, true);
+                 break;
+             }
++            case OPTION_FORWARD_NO_QUOTE: {
++                if (getMessagesController().isFrozen()) {
++                    AccountFrozenAlert.show(currentAccount);
++                    selectedObject = null;
++                    selectedObjectToEditCaption = null;
++                    selectedObjectGroup = null;
++                    return;
++                }
++                IS_FORWARD_NO_QUOTE = true;
++                forwardingMessage = selectedObject;
++                forwardingMessageGroup = selectedObjectGroup;
++                Bundle noQuoteArgs = new Bundle();
++                noQuoteArgs.putBoolean("onlySelect", true);
++                noQuoteArgs.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_FORWARD);
++                noQuoteArgs.putInt("messagesCount", 1);
++                noQuoteArgs.putInt("hasPoll", forwardingMessage.isTodo() ? 3 : forwardingMessage.isPoll() ? (forwardingMessage.isPublicPoll() ? 2 : 1) : 0);
++                if (ChatObject.isMonoForum(currentChat) && ChatObject.canManageMonoForum(currentAccount, currentChat) && currentChat.linked_monoforum_id != 0) {
++                    noQuoteArgs.putLong("forward_into_channel", -currentChat.linked_monoforum_id);
++                }
++                noQuoteArgs.putBoolean("hasInvoice", forwardingMessage.isInvoice());
++                noQuoteArgs.putBoolean("canSelectTopics", true);
++                DialogsActivity noQuoteFragment = new DialogsActivity(noQuoteArgs);
++                noQuoteFragment.setDelegate(this);
++                presentFragment(noQuoteFragment);
++                break;
++            }
+             case OPTION_FORWARD: {
+                 if (getMessagesController().isFrozen()) {
+                     AccountFrozenAlert.show(currentAccount);
+@@ -33472,6 +33537,45 @@
                  }
                  break;
              }
++            case OPTION_FORWARD_TO_SAVED: {
++                ArrayList<MessageObject> fmessages = new ArrayList<>();
++                if (selectedObjectGroup != null) {
++                    fmessages.addAll(selectedObjectGroup.messages);
++                } else if (selectedObject != null) {
++                    fmessages.add(selectedObject);
++                }
++                if (!fmessages.isEmpty()) {
++                    long savedDialogId = getUserConfig().getClientUserId();
++                    getSendMessagesHelper().sendMessage(fmessages, savedDialogId, false, false, true, 0, 0, null, -1, 0, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
++                    createUndoView();
++                    if (undoView != null) {
++                        undoView.showWithAction(savedDialogId, UndoView.ACTION_FWD_MESSAGES, fmessages.size());
++                    }
++                }
++                selectedObject = null;
++                selectedObjectGroup = null;
++                break;
++            }
 +            case OPTION_SELECT_MESSAGE: {
 +                if (accessibilitySelectedMessagePosition >= 0) {
 +                    startMultiselect(accessibilitySelectedMessagePosition);
@@ -113,7 +175,7 @@
              case OPTION_SHARE: {
                  String path = selectedObject.messageOwner.attachPath;
                  if (path != null && path.length() > 0) {
-@@ -40605,8 +40661,11 @@
+@@ -40605,8 +40709,11 @@
  
          @Override
          public void didLongPress(ChatMessageCell cell, float x, float y) {
@@ -126,7 +188,7 @@
          }
  
          @Override
-@@ -45645,6 +45704,18 @@
+@@ -45645,6 +45752,18 @@
          final boolean isEphemeral = message.isEphemeral();
          final boolean isEphemeralFromBot = isEphemeral && !message.isOut();
  
@@ -145,3 +207,22 @@
  
          boolean allowChatActions = true;
          boolean allowPin;
+@@ -46118,6 +46237,18 @@
+                     items.add(LocaleController.getString(R.string.Forward));
+                     options.add(OPTION_FORWARD);
+                     icons.add(R.drawable.msg_forward);
++
++                    // Accessibility: one-tap forward to Saved Messages,
++                    // skipping the dialog picker.
++                    items.add(LocaleController.getString(R.string.Forward) + " \u2192 " + LocaleController.getString(R.string.SavedMessages));
++                    options.add(OPTION_FORWARD_TO_SAVED);
++                    icons.add(R.drawable.msg_forward);
++
++                    // Accessibility: forward while omitting the
++                    // "Forwarded from" citation.
++                    items.add(LocaleController.getString(R.string.Forward) + " (no quote)");
++                    options.add(OPTION_FORWARD_NO_QUOTE);
++                    icons.add(R.drawable.msg_forward);
+                 }
+                 if (allowUnpin) {
+                     items.add(LocaleController.getString(R.string.UnpinMessage));
