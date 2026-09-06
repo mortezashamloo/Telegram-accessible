@@ -9,7 +9,19 @@
                      int avatarsOffset = 0;
                      String comment;
                      if (commentProgress == null) {
-@@ -13334,6 +13334,7 @@
+@@ -10760,7 +10760,10 @@
+             }
+ 
+             final int separatorHeight = dp(4 + 4);
+-            if (!messageObject.isRestrictedMessage && !messageObject.isRepostPreview && (currentPosition == null || currentMessagesGroup != null && currentMessagesGroup.isDocuments && currentPosition.last) && (inlineButtons != null) && !messageObject.hasExtendedMedia()) {
++            // Accessibility: inline bot buttons under the bubble are hidden
++            // from TalkBack navigation; use the "Bot Buttons" message menu
++            // item instead (see ChatActivity.OPTION_BOT_BUTTONS_MENU).
++            if (false && !messageObject.isRestrictedMessage && !messageObject.isRepostPreview && (currentPosition == null || currentMessagesGroup != null && currentMessagesGroup.isDocuments && currentPosition.last) && (inlineButtons != null) && !messageObject.hasExtendedMedia()) {
+                 int rows, separators;
+ 
+                 if (inlineButtons != null) {
+@@ -13334,6 +13337,7 @@
                                   boolean topNear,
                                   boolean firstInChat,
                                   boolean lastInChatList) {
@@ -17,7 +29,7 @@
          if (attachedToWindow && !frozen) {
              setMessageContent(messageObject, groupedMessages, bottomNear, topNear, firstInChat, lastInChatList);
          } else {
-@@ -18286,6 +18287,45 @@
+@@ -18286,6 +18290,45 @@
          createLoadingProgressLayout(uploadedSize, totalSize);
      }
  
@@ -63,7 +75,7 @@
      private void createLoadingProgressLayout(TLRPC.Document document) {
          if (document == null) {
              return;
-@@ -18309,6 +18349,11 @@
+@@ -18309,6 +18352,11 @@
          }
          loadingProgressLayoutHash = hash;
  
@@ -75,7 +87,7 @@
          if (lastLoadingSizeTotal == 0) {
              lastLoadingSizeTotal = totalSize;
          } else {
-@@ -18646,17 +18691,10 @@
+@@ -18646,17 +18694,10 @@
      }
  
      protected boolean checkNeedDrawShareButton(MessageObject messageObject) {
@@ -97,7 +109,7 @@
      }
  
      public boolean isInsideBackground(float x, float y) {
-@@ -27847,6 +27885,12 @@
+@@ -27847,6 +27888,12 @@
          @Override
          public boolean performAction(int virtualViewId, int action, Bundle arguments) {
              if (virtualViewId == HOST_VIEW_ID) {

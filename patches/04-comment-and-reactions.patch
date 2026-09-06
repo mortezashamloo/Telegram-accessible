@@ -17,7 +17,7 @@
      private ActionBarMenuSubItem menuDeleteItem;
      private final Runnable updateDeleteItemRunnable = new Runnable() {
          @Override
-@@ -1248,6 +1251,11 @@
+@@ -1248,6 +1251,12 @@
  
      public final static int OPTION_VIEW_STATISTICS = 115;
      public final static int OPTION_WELCOME_REVERT = 116;
@@ -26,10 +26,11 @@
 +    public final static int OPTION_SELECT_MESSAGE = 122; // Accessibility: enters selection mode from inside the message menu
 +    public final static int OPTION_FORWARD_TO_SAVED = 123; // Accessibility: one-tap forward to Saved Messages
 +    public final static int OPTION_FORWARD_NO_QUOTE = 124; // Accessibility: forward while omitting the "Forwarded from" quote
++    public final static int OPTION_BOT_BUTTONS_MENU = 125; // Accessibility: opens a dialog listing inline bot buttons instead of them being scattered inline
  
      private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
              NotificationCenter.messagesRead,
-@@ -1714,10 +1722,10 @@
+@@ -1714,10 +1723,10 @@
                  }
                  processRowSelect(view, outside, x, y);
              }
@@ -44,7 +45,7 @@
              return result;
          }
      };
-@@ -30911,6 +30919,7 @@
+@@ -30911,6 +30920,7 @@
              } else if (type >= 0 || type == -1 && single && (message.isSending() || message.isEditing()) && currentEncryptedChat == null) {
                  selectedObject = message;
                  selectedObjectGroup = groupedMessages;
@@ -52,7 +53,7 @@
                  fillMessageMenu(primaryMessage, icons, items, options);
              }
  
-@@ -31775,6 +31784,21 @@
+@@ -31775,6 +31785,21 @@
                          popupLayout.addView(new ActionBarPopupWindow.GapView(contentView.getContext(), themeDelegate), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 8));
                      }
                  }
@@ -74,7 +75,7 @@
                  scrimPopupWindowItems = new ActionBarMenuSubItem[items.size()];
                  for (int a = 0, N = items.size(); a < N; a++) {
                      final Integer option = options.get(a);
-@@ -32129,6 +32153,21 @@
+@@ -32129,6 +32154,21 @@
                      LinearLayout.LayoutParams params = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, (int) (52 + reactionsLayout.getTopOffset() / AndroidUtilities.density + pad), Gravity.RIGHT, 0, 50, 0, -20);
                      scrimPopupContainerLayout.addView(reactionsLayout, params);
                      scrimPopupContainerLayout.setReactionsLayout(reactionsLayout);
@@ -96,10 +97,48 @@
                      scrimPopupContainerLayout.setClipChildren(false);
                      MessageObject messageWithReactions = message;
                      MessageObject.GroupedMessages group = getValidGroupedMessage(message);
-@@ -33308,6 +33347,32 @@
+@@ -33308,6 +33348,70 @@
                  createDeleteMessagesAlert(selectedObject, selectedObjectGroup, true);
                  break;
              }
++            case OPTION_BOT_BUTTONS_MENU: {
++                try {
++                    MessageObject msg = selectedObject;
++                    ArrayList<CharSequence> labels = new ArrayList<>();
++                    ArrayList<TL_keyboard.KeyboardInlineButton> btns = new ArrayList<>();
++                    if (msg != null && msg.messageOwner != null && msg.messageOwner.reply_markup instanceof TLRPC.TL_replyInlineMarkup) {
++                        TLRPC.TL_replyInlineMarkup markup = (TLRPC.TL_replyInlineMarkup) msg.messageOwner.reply_markup;
++                        for (int b = 0; b < markup.rows.size(); b++) {
++                            TL_keyboard.KeyboardInlineButtonRow row = markup.rows.get(b);
++                            for (int c = 0; c < row.buttons.size(); c++) {
++                                TL_keyboard.KeyboardInlineButton btn = row.buttons.get(c);
++                                CharSequence label = !TextUtils.isEmpty(btn.text) ? btn.text : ("Bot " + (labels.size() + 1));
++                                labels.add(label);
++                                btns.add(btn);
++                            }
++                        }
++                    }
++                    if (!labels.isEmpty() && getParentActivity() != null) {
++                        CharSequence[] itemsArr = labels.toArray(new CharSequence[0]);
++                        final MessageObject msgFinal = msg;
++                        final ArrayList<TL_keyboard.KeyboardInlineButton> btnsFinal = btns;
++                        AlertDialog.Builder botBtnBuilder = new AlertDialog.Builder(getParentActivity());
++                        botBtnBuilder.setTitle("Bot Buttons");
++                        botBtnBuilder.setItems(itemsArr, (dialog, which) -> {
++                            if (which >= 0 && which < btnsFinal.size() && chatActivityEnterView != null) {
++                                chatActivityEnterView.didPressedBotButton(btnsFinal.get(which), msgFinal, msgFinal);
++                            }
++                        });
++                        botBtnBuilder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
++                        showDialog(botBtnBuilder.create());
++                    }
++                } catch (Throwable e) {
++                    FileLog.e(e);
++                }
++                selectedObject = null;
++                selectedObjectGroup = null;
++                break;
++            }
 +            case OPTION_FORWARD_NO_QUOTE: {
 +                if (getMessagesController().isFrozen()) {
 +                    AccountFrozenAlert.show(currentAccount);
@@ -129,7 +168,7 @@
              case OPTION_FORWARD: {
                  if (getMessagesController().isFrozen()) {
                      AccountFrozenAlert.show(currentAccount);
-@@ -33472,6 +33537,45 @@
+@@ -33472,6 +33576,45 @@
                  }
                  break;
              }
@@ -175,7 +214,7 @@
              case OPTION_SHARE: {
                  String path = selectedObject.messageOwner.attachPath;
                  if (path != null && path.length() > 0) {
-@@ -40605,8 +40709,11 @@
+@@ -40605,8 +40748,11 @@
  
          @Override
          public void didLongPress(ChatMessageCell cell, float x, float y) {
@@ -188,7 +227,7 @@
          }
  
          @Override
-@@ -45645,6 +45752,18 @@
+@@ -45645,6 +45791,18 @@
          final boolean isEphemeral = message.isEphemeral();
          final boolean isEphemeralFromBot = isEphemeral && !message.isOut();
  
@@ -207,7 +246,23 @@
  
          boolean allowChatActions = true;
          boolean allowPin;
-@@ -46118,6 +46237,18 @@
+@@ -45707,6 +45865,15 @@
+             allowChatActions = false;
+         }
+ 
++        // Accessibility: inline bot buttons (Connect/Close/Open etc.) are
++        // scattered between messages, forcing extra TalkBack navigation.
++        // Fold them into a single "Bot Buttons" menu item instead.
++        if (message != null && message.hasInlineBotButtons()) {
++            items.add("Bot Buttons");
++            options.add(OPTION_BOT_BUTTONS_MENU);
++            icons.add(R.drawable.msg_viewreplies);
++        }
++
+         if (message.isSponsored() && !getUserConfig().isPremium() && !getMessagesController().premiumFeaturesBlocked() && !message.sponsoredCanReport) {
+             items.add(LocaleController.getString(R.string.HideAd));
+             options.add(OPTION_HIDE_SPONSORED_MESSAGE);
+@@ -46118,6 +46285,18 @@
                      items.add(LocaleController.getString(R.string.Forward));
                      options.add(OPTION_FORWARD);
                      icons.add(R.drawable.msg_forward);
