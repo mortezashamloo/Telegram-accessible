@@ -1,10 +1,14 @@
---- a/TMessagesProj/src/main/java/org/telegram/ui/Adapters/DrawerLayoutAdapter.java
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/Adapters/DrawerLayoutAdapter.java
-@@ -340,6 +340,7 @@
-         items.add(new Item(10, LocaleController.getString(R.string.Calls), callsIcon));
-         items.add(new Item(11, LocaleController.getString(R.string.SavedMessages), savedIcon));
-         items.add(new Item(8, LocaleController.getString(R.string.Settings), settingsIcon));
-+        items.add(new Item(90, "Accessible Settings", settingsIcon)); // Accessibility: new item for the a11y settings screen
-         items.add(null); // divider
-         items.add(new Item(7, LocaleController.getString(R.string.InviteFriends), inviteIcon));
-         items.add(new Item(13, LocaleController.getString(R.string.TelegramFeatures), helpIcon));
+--- a/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
+@@ -13765,6 +13765,11 @@
+                 presentFragment(new SettingsActivity());
+             });
+         }
++        // Accessibility: new item for the a11y settings screen, always
++        // reachable regardless of the showCallsTab condition above.
++        io.add(R.drawable.msg_settings_old, "Accessible Settings", () -> {
++            presentFragment(new org.telegram.ui.AccessibleSettingsActivity());
++        });
+ 
+         if (proxyMenuSubItem != null) {
+             proxyMenuSubItem.subtextView.setTextColor(getThemedColor(Theme.key_groupcreate_sectionText));

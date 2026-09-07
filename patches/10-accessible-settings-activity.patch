@@ -1,6 +1,6 @@
 --- /dev/null
 +++ b/TMessagesProj/src/main/java/org/telegram/ui/AccessibleSettingsActivity.java
-@@ -0,0 +1,162 @@
+@@ -0,0 +1,163 @@
 +/*
 + * Accessibility fork: a simple settings screen for TalkBack-related
 + * options, opened from a new "Accessible Settings" item in the main
@@ -26,6 +26,7 @@
 +import android.widget.TextView;
 +
 +import org.telegram.messenger.MessagesController;
++import org.telegram.messenger.R;
 +import org.telegram.ui.ActionBar.ActionBar;
 +import org.telegram.ui.ActionBar.BaseFragment;
 +import org.telegram.ui.ActionBar.Theme;
