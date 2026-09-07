@@ -29,7 +29,7 @@
          if (attachedToWindow && !frozen) {
              setMessageContent(messageObject, groupedMessages, bottomNear, topNear, firstInChat, lastInChatList);
          } else {
-@@ -18286,6 +18290,45 @@
+@@ -18286,6 +18290,55 @@
          createLoadingProgressLayout(uploadedSize, totalSize);
      }
  
@@ -55,8 +55,18 @@
 +            // Not the message TalkBack is currently on -- stay silent for it.
 +            return;
 +        }
-+        // Throttle to every 5% (plus 100%) so TalkBack isn't overwhelmed.
-+        if (percent != 100 && percent != 0 && lastAnnouncedProgressPercent >= 0 && percent / 5 == lastAnnouncedProgressPercent / 5) {
++        // Accessibility: on/off + step size, configurable from the
++        // "Accessible Settings" screen (AccessibleSettingsActivity).
++        android.content.SharedPreferences a11yPrefs = MessagesController.getGlobalMainSettings();
++        if (!a11yPrefs.getBoolean("a11yProgressAnnounce", true)) {
++            return;
++        }
++        int step = a11yPrefs.getInt("a11yProgressStep", 5);
++        if (step < 1) {
++            step = 1;
++        }
++        // Throttle so TalkBack isn't overwhelmed.
++        if (percent != 100 && percent != 0 && lastAnnouncedProgressPercent >= 0 && percent / step == lastAnnouncedProgressPercent / step) {
 +            return;
 +        }
 +        if (percent == lastAnnouncedProgressPercent) {
@@ -75,7 +85,7 @@
      private void createLoadingProgressLayout(TLRPC.Document document) {
          if (document == null) {
              return;
-@@ -18309,6 +18352,11 @@
+@@ -18309,6 +18362,11 @@
          }
          loadingProgressLayoutHash = hash;
  
@@ -87,7 +97,7 @@
          if (lastLoadingSizeTotal == 0) {
              lastLoadingSizeTotal = totalSize;
          } else {
-@@ -18646,17 +18694,10 @@
+@@ -18646,17 +18704,10 @@
      }
  
      protected boolean checkNeedDrawShareButton(MessageObject messageObject) {
@@ -109,7 +119,7 @@
      }
  
      public boolean isInsideBackground(float x, float y) {
-@@ -27847,6 +27888,22 @@
+@@ -27847,6 +27898,22 @@
          @Override
          public boolean performAction(int virtualViewId, int action, Bundle arguments) {
              if (virtualViewId == HOST_VIEW_ID) {

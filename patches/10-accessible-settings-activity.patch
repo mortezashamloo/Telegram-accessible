@@ -1,0 +1,165 @@
+--- /dev/null
++++ b/TMessagesProj/src/main/java/org/telegram/ui/AccessibleSettingsActivity.java
+@@ -0,0 +1,162 @@
++/*
++ * Accessibility fork: a simple settings screen for TalkBack-related
++ * options, opened from a new "Accessible Settings" item in the main
++ * drawer (see LaunchActivity.java / DrawerLayoutAdapter.java).
++ *
++ * Deliberately built with plain Android widgets (LinearLayout, TextView,
++ * Switch, Button) instead of Telegram's themed Cell components, to avoid
++ * depending on internal classes this fork doesn't have full source for.
++ * TalkBack doesn't care about visual styling -- only that things are
++ * labeled and reachable.
++ */
++package org.telegram.ui;
++
++import android.content.Context;
++import android.content.SharedPreferences;
++import android.graphics.Color;
++import android.view.Gravity;
++import android.view.View;
++import android.widget.Button;
++import android.widget.LinearLayout;
++import android.widget.ScrollView;
++import android.widget.Switch;
++import android.widget.TextView;
++
++import org.telegram.messenger.MessagesController;
++import org.telegram.ui.ActionBar.ActionBar;
++import org.telegram.ui.ActionBar.BaseFragment;
++import org.telegram.ui.ActionBar.Theme;
++
++public class AccessibleSettingsActivity extends BaseFragment {
++
++    private static final int VOICE_QUALITY_LOW = 0;
++    private static final int VOICE_QUALITY_MEDIUM = 1;
++    private static final int VOICE_QUALITY_HIGH = 2;
++
++    private Button lowButton;
++    private Button mediumButton;
++    private Button highButton;
++
++    @Override
++    public View createView(Context context) {
++        actionBar.setBackButtonImage(R.drawable.ic_ab_back);
++        actionBar.setAllowOverlayTitle(true);
++        actionBar.setTitle("Accessible Settings");
++        actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
++            @Override
++            public void onItemClick(int id) {
++                if (id == -1) {
++                    finishFragment();
++                }
++            }
++        });
++
++        SharedPreferences prefs = MessagesController.getGlobalMainSettings();
++
++        ScrollView scrollView = new ScrollView(context);
++        LinearLayout layout = new LinearLayout(context);
++        layout.setOrientation(LinearLayout.VERTICAL);
++        int pad = dp(16);
++        layout.setPadding(pad, pad, pad, pad);
++        scrollView.addView(layout);
++
++        // --- Voice message recording quality ---
++        TextView voiceHeader = sectionHeader(context, "Voice message recording quality");
++        layout.addView(voiceHeader);
++
++        LinearLayout voiceRow = new LinearLayout(context);
++        voiceRow.setOrientation(LinearLayout.HORIZONTAL);
++        int currentQuality = prefs.getInt("voiceRecordQuality", VOICE_QUALITY_HIGH);
++
++        lowButton = new Button(context);
++        lowButton.setText("Low");
++        mediumButton = new Button(context);
++        mediumButton.setText("Medium");
++        highButton = new Button(context);
++        highButton.setText("High");
++
++        lowButton.setOnClickListener(v -> setVoiceQuality(prefs, VOICE_QUALITY_LOW));
++        mediumButton.setOnClickListener(v -> setVoiceQuality(prefs, VOICE_QUALITY_MEDIUM));
++        highButton.setOnClickListener(v -> setVoiceQuality(prefs, VOICE_QUALITY_HIGH));
++
++        voiceRow.addView(lowButton);
++        voiceRow.addView(mediumButton);
++        voiceRow.addView(highButton);
++        layout.addView(voiceRow);
++        updateVoiceQualityButtons(currentQuality);
++
++        // --- Progress announcements ---
++        TextView progressHeader = sectionHeader(context, "Upload / download progress announcements");
++        layout.addView(progressHeader);
++
++        Switch progressSwitch = new Switch(context);
++        progressSwitch.setText("Announce progress while downloading/uploading");
++        progressSwitch.setChecked(prefs.getBoolean("a11yProgressAnnounce", true));
++        progressSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
++            prefs.edit().putBoolean("a11yProgressAnnounce", isChecked).apply();
++        });
++        layout.addView(progressSwitch);
++
++        TextView stepHeader = sectionHeader(context, "Announce every...");
++        layout.addView(stepHeader);
++
++        LinearLayout stepRow = new LinearLayout(context);
++        stepRow.setOrientation(LinearLayout.HORIZONTAL);
++        int currentStep = prefs.getInt("a11yProgressStep", 5);
++        Button step5 = new Button(context);
++        step5.setText("5%");
++        Button step10 = new Button(context);
++        step10.setText("10%");
++        Button step20 = new Button(context);
++        step20.setText("20%");
++        step5.setOnClickListener(v -> prefs.edit().putInt("a11yProgressStep", 5).apply());
++        step10.setOnClickListener(v -> prefs.edit().putInt("a11yProgressStep", 10).apply());
++        step20.setOnClickListener(v -> prefs.edit().putInt("a11yProgressStep", 20).apply());
++        stepRow.addView(step5);
++        stepRow.addView(step10);
++        stepRow.addView(step20);
++        layout.addView(stepRow);
++
++        // --- Voice message sender/receiver announcement ---
++        // Note: this toggle stores the preference, but the voice-message
++        // sender/receiver announcement feature itself is not yet built.
++        TextView senderHeader = sectionHeader(context, "Voice messages");
++        layout.addView(senderHeader);
++
++        Switch senderSwitch = new Switch(context);
++        senderSwitch.setText("Announce sender/receiver on voice messages (coming soon)");
++        senderSwitch.setChecked(prefs.getBoolean("a11yVoiceSenderAnnounce", false));
++        senderSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
++            prefs.edit().putBoolean("a11yVoiceSenderAnnounce", isChecked).apply();
++        });
++        layout.addView(senderSwitch);
++
++        fragmentView = scrollView;
++        return fragmentView;
++    }
++
++    private void setVoiceQuality(SharedPreferences prefs, int quality) {
++        prefs.edit().putInt("voiceRecordQuality", quality).apply();
++        updateVoiceQualityButtons(quality);
++    }
++
++    private void updateVoiceQualityButtons(int quality) {
++        lowButton.setAlpha(quality == VOICE_QUALITY_LOW ? 1f : 0.5f);
++        mediumButton.setAlpha(quality == VOICE_QUALITY_MEDIUM ? 1f : 0.5f);
++        highButton.setAlpha(quality == VOICE_QUALITY_HIGH ? 1f : 0.5f);
++    }
++
++    private TextView sectionHeader(Context context, String text) {
++        TextView tv = new TextView(context);
++        tv.setText(text);
++        tv.setTextSize(16);
++        tv.setTypeface(null, android.graphics.Typeface.BOLD);
++        int topPad = dp(20);
++        tv.setPadding(0, topPad, 0, dp(8));
++        return tv;
++    }
++
++    private int dp(int value) {
++        return org.telegram.messenger.AndroidUtilities.dp(value);
++    }
++}

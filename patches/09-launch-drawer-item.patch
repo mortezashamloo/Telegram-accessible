@@ -1,0 +1,13 @@
+--- a/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
+@@ -635,6 +635,10 @@
+                     drawerLayoutContainer.closeDrawer(false);
+                 } else if (id == 8) {
+                     openSettings(false);
++                } else if (id == 90) {
++                    // Accessibility: open the new a11y settings screen
++                    presentFragment(new org.telegram.ui.AccessibleSettingsActivity());
++                    drawerLayoutContainer.closeDrawer(false);
+                 } else if (id == 9) {
+                     Browser.openUrl(LaunchActivity.this, LocaleController.getString(R.string.TelegramFaqUrl));
+                     drawerLayoutContainer.closeDrawer(false);

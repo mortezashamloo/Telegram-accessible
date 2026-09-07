@@ -1,0 +1,10 @@
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Adapters/DrawerLayoutAdapter.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Adapters/DrawerLayoutAdapter.java
+@@ -340,6 +340,7 @@
+         items.add(new Item(10, LocaleController.getString(R.string.Calls), callsIcon));
+         items.add(new Item(11, LocaleController.getString(R.string.SavedMessages), savedIcon));
+         items.add(new Item(8, LocaleController.getString(R.string.Settings), settingsIcon));
++        items.add(new Item(90, "Accessible Settings", settingsIcon)); // Accessibility: new item for the a11y settings screen
+         items.add(null); // divider
+         items.add(new Item(7, LocaleController.getString(R.string.InviteFriends), inviteIcon));
+         items.add(new Item(13, LocaleController.getString(R.string.TelegramFeatures), helpIcon));

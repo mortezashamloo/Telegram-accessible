@@ -1,6 +1,74 @@
 --- a/TMessagesProj/src/main/java/org/telegram/ui/Cells/DialogCell.java
 +++ b/TMessagesProj/src/main/java/org/telegram/ui/Cells/DialogCell.java
-@@ -5523,14 +5523,14 @@
+@@ -1143,7 +1143,7 @@
+             if (dialog.unread_count > 0) {
+                 builder.setSpan(new TypefaceSpan(AndroidUtilities.bold(), 0, Theme.getColor(Theme.key_chats_nameArchived, resourcesProvider)), boldStart, boldEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+             }
+-            if (builder.length() > 150) {
++            if (builder.length() > 300) {
+                 break;
+             }
+         }
+@@ -1203,7 +1203,7 @@
+             if (dialog.unread_count > 0) {
+                 builder.setSpan(new TypefaceSpan(AndroidUtilities.bold(), 0, Theme.getColor(Theme.key_chats_nameArchived, resourcesProvider)), boldStart, boldEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+             }
+-            if (builder.length() > 150) {
++            if (builder.length() > 300) {
+                 break;
+             }
+         }
+@@ -1385,8 +1385,8 @@
+                     stringBuilder.setSpan(new ForegroundColorSpanThemable(Theme.key_chats_attachMessage, resourcesProvider), 0, stringBuilder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                 } else {
+                     String mess = customDialog.message;
+-                    if (mess.length() > 150) {
+-                        mess = mess.substring(0, 150);
++                    if (mess.length() > 300) {
++                        mess = mess.substring(0, 300);
+                     }
+                     if (useForceThreeLines || SharedConfig.useThreeLinesLayout) {
+                         stringBuilder = formatInternal(messageFormatType, mess, messageNameString);
+@@ -1620,13 +1620,13 @@
+                     } else {
+                         CharSequence mess;
+                         if (draftMessage != null && draftMessage.rich_message != null) {
+-                            mess = MessageObject.formatRichMessage(draftMessage.rich_message, false, false, 150);
++                            mess = MessageObject.formatRichMessage(draftMessage.rich_message, false, false, 300);
+                         } else if (draftVoice) {
+                             mess = getString(R.string.AttachAudio);
+                         } else if (draftMessage != null) {
+                             mess = draftMessage.message;
+-                            if (mess.length() > 150) {
+-                                mess = mess.subSequence(0, 150);
++                            if (mess.length() > 300) {
++                                mess = mess.subSequence(0, 300);
+                             }
+                         } else {
+                             mess = "";
+@@ -2019,8 +2019,8 @@
+                                             messageString = AndroidUtilities.ellipsizeCenterEnd(messageString, message.highlightedWords.get(0), w, currentMessagePaint, 130);
+                                         }
+                                     } else {
+-                                        if (messageString.length() > 150) {
+-                                            messageString = messageString.subSequence(0, 150);
++                                        if (messageString.length() > 300) {
++                                            messageString = messageString.subSequence(0, 300);
+                                         }
+                                         messageString = AndroidUtilities.replaceNewLines(messageString);
+                                     }
+@@ -2630,8 +2630,8 @@
+                 messageString = "";
+             }
+             CharSequence mess = messageString;
+-            if (mess.length() > 150) {
+-                mess = mess.subSequence(0, 150);
++            if (mess.length() > 300) {
++                mess = mess.subSequence(0, 300);
+             }
+             if (!useForceThreeLines && !SharedConfig.useThreeLinesLayout || hasTags() || messageNameString != null) {
+                 mess = AndroidUtilities.replaceNewLines(mess);
+@@ -5523,24 +5523,22 @@
                  }
                  sb.append(". ");
              } else if (chat != null) {
@@ -17,7 +85,19 @@
              }
          }
          if (drawVerified) {
-@@ -5566,13 +5566,6 @@
+             sb.append(getString(R.string.AccDescrVerified));
+             sb.append(". ");
+         }
+-        if (dialogMuted) {
+-            sb.append(getString(R.string.AccDescrNotificationsMuted));
+-            sb.append(". ");
+-        }
++        // Accessibility: "Muted" announcement removed from the chat-list
++        // preview per request.
+         if (isOnline()) {
+             sb.append(getString(R.string.AccDescrUserOnline));
+             sb.append(". ");
+@@ -5566,13 +5564,6 @@
          if (lastMessageDate == 0) {
              lastDate = message.messageOwner.date;
          }
@@ -31,7 +111,7 @@
          if (chat != null && !message.isOut() && message.isFromUser() && message.messageOwner.action == null) {
              TLRPC.User fromUser = MessagesController.getInstance(currentAccount).getUser(message.messageOwner.from_id.user_id);
              if (fromUser != null) {
-@@ -5606,6 +5599,12 @@
+@@ -5606,6 +5597,12 @@
                  sb.append(messageString);
              }
          }
@@ -44,3 +124,25 @@
          event.setContentDescription(sb);
          setContentDescription(sb);
      }
+@@ -5923,8 +5920,8 @@
+                 }
+                 stringBuilder = new SpannableStringBuilder(emoji).append(text);
+             } else {
+-                if (mess.length() > 150) {
+-                    mess = mess.subSequence(0, 150);
++                if (mess.length() > 300) {
++                    mess = mess.subSequence(0, 300);
+                 }
+                 SpannableString msgBuilder = new SpannableString(mess);
+                 if (message != null) {
+@@ -6038,8 +6035,8 @@
+                     mess = AndroidUtilities.ellipsizeCenterEnd(mess, message.highlightedWords.get(0), w, currentMessagePaint, 130);
+                 }
+             } else {
+-                if (mess.length() > 150) {
+-                    mess = mess.subSequence(0, 150);
++                if (mess.length() > 300) {
++                    mess = mess.subSequence(0, 300);
+                 }
+                 mess = AndroidUtilities.replaceNewLines(mess);
+             }
