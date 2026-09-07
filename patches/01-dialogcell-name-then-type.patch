@@ -17,3 +17,30 @@
              }
          }
          if (drawVerified) {
+@@ -5566,13 +5566,6 @@
+         if (lastMessageDate == 0) {
+             lastDate = message.messageOwner.date;
+         }
+-        String date = LocaleController.formatDateAudio(lastDate, true);
+-        if (message.isOut()) {
+-            sb.append(LocaleController.formatString("AccDescrSentDate", R.string.AccDescrSentDate, date));
+-        } else {
+-            sb.append(LocaleController.formatString("AccDescrReceivedDate", R.string.AccDescrReceivedDate, date));
+-        }
+-        sb.append(". ");
+         if (chat != null && !message.isOut() && message.isFromUser() && message.messageOwner.action == null) {
+             TLRPC.User fromUser = MessagesController.getInstance(currentAccount).getUser(message.messageOwner.from_id.user_id);
+             if (fromUser != null) {
+@@ -5606,6 +5599,12 @@
+                 sb.append(messageString);
+             }
+         }
++        // Accessibility: read the received/sent clock time last, after the
++        // sender name and message preview, e.g. "receive @5:55pm".
++        String a11yClockTime = LocaleController.formatDateAudio(lastDate, true);
++        sb.append(message.isOut() ? "sent @" : "receive @");
++        sb.append(a11yClockTime);
++        sb.append(". ");
+         event.setContentDescription(sb);
+         setContentDescription(sb);
+     }

@@ -109,7 +109,7 @@
      }
  
      public boolean isInsideBackground(float x, float y) {
-@@ -27847,6 +27888,12 @@
+@@ -27847,6 +27888,22 @@
          @Override
          public boolean performAction(int virtualViewId, int action, Bundle arguments) {
              if (virtualViewId == HOST_VIEW_ID) {
@@ -118,6 +118,16 @@
 +                    lastAnnouncedProgressPercent = -1; // announce fresh as soon as we arrive here
 +                } else if (action == AccessibilityNodeInfo.ACTION_CLEAR_ACCESSIBILITY_FOCUS) {
 +                    hasAccessibilityFocus = false;
++                } else if (action == AccessibilityNodeInfo.ACTION_LONG_CLICK) {
++                    // Accessibility: TalkBack's long-press gesture reaches
++                    // this virtual host node directly, bypassing the normal
++                    // touch long-press path (didLongPress/onItemLongClick)
++                    // that was already fixed to open the menu instead of
++                    // selecting. Route it to the same fixed method here too.
++                    if (delegate != null) {
++                        delegate.didLongPress(ChatMessageCell.this, 0, 0);
++                    }
++                    return true;
 +                }
                  performAccessibilityAction(action, arguments);
              } else {
