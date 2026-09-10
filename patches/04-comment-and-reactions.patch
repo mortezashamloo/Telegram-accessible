@@ -30,9 +30,38 @@
  
      private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
              NotificationCenter.messagesRead,
-@@ -1714,10 +1723,10 @@
+@@ -1705,19 +1714,36 @@
+                 if (messageObject == null) return false;
+                 showMenu = messageObject.messageOwner.action instanceof TLRPC.TL_messageActionSetMessagesTTL || actionCell.getMessageObject().type == MessageObject.TYPE_SUGGEST_PHOTO || actionCell.getMessageObject().isWallpaperAction() || actionCell.getMessageObject().type == MessageObject.TYPE_GIFT_STARS;
+             }
+-            if (!actionBar.isActionModeShowed() && (!isReport() || showMenu)) {
+-                result = createMenu(view, false, true, x, y, true);
+-            } else {
++            // Accessibility: previously this also required
++            // !actionBar.isActionModeShowed() to open the menu, so once
++            // selection mode had been entered once, every later long-press
++            // fell through to direct select instead of the menu. The report
++            // -mode selection flow is preserved; everything else now always
++            // opens the menu.
++            // Accessibility: long-press opens the menu by default. But once
++            // at least one message is already selected (selection mode
++            // active via the "Select" menu item), long-press on any message
++            // selects it directly instead -- matching how selecting a range
++            // is expected to work once you've started.
++            if (isReport() && !showMenu) {
+                 boolean outside = false;
+                 if (view instanceof ChatMessageCell) {
+                     outside = !((ChatMessageCell) view).isInsideBackground(x, y);
                  }
                  processRowSelect(view, outside, x, y);
++            } else if (actionBar.isActionModeShowed()) {
++                boolean outside = false;
++                if (view instanceof ChatMessageCell) {
++                    outside = !((ChatMessageCell) view).isInsideBackground(x, y);
++                }
++                processRowSelect(view, outside, x, y);
++            } else {
++                result = createMenu(view, false, true, x, y, true);
              }
 -            if (view instanceof ChatMessageCell && (((ChatMessageCell) view).getMessageObject() != null && ((ChatMessageCell) view).getMessageObject().type != MessageObject.TYPE_JOINED_CHANNEL)) {
 -                startMultiselect(position);
@@ -45,7 +74,7 @@
              return result;
          }
      };
-@@ -30911,6 +30920,7 @@
+@@ -30911,6 +30937,7 @@
              } else if (type >= 0 || type == -1 && single && (message.isSending() || message.isEditing()) && currentEncryptedChat == null) {
                  selectedObject = message;
                  selectedObjectGroup = groupedMessages;
@@ -53,7 +82,7 @@
                  fillMessageMenu(primaryMessage, icons, items, options);
              }
  
-@@ -31775,6 +31785,21 @@
+@@ -31775,6 +31802,21 @@
                          popupLayout.addView(new ActionBarPopupWindow.GapView(contentView.getContext(), themeDelegate), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 8));
                      }
                  }
@@ -75,7 +104,7 @@
                  scrimPopupWindowItems = new ActionBarMenuSubItem[items.size()];
                  for (int a = 0, N = items.size(); a < N; a++) {
                      final Integer option = options.get(a);
-@@ -32129,6 +32154,21 @@
+@@ -32129,6 +32171,21 @@
                      LinearLayout.LayoutParams params = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, (int) (52 + reactionsLayout.getTopOffset() / AndroidUtilities.density + pad), Gravity.RIGHT, 0, 50, 0, -20);
                      scrimPopupContainerLayout.addView(reactionsLayout, params);
                      scrimPopupContainerLayout.setReactionsLayout(reactionsLayout);
@@ -97,7 +126,7 @@
                      scrimPopupContainerLayout.setClipChildren(false);
                      MessageObject messageWithReactions = message;
                      MessageObject.GroupedMessages group = getValidGroupedMessage(message);
-@@ -33308,6 +33348,70 @@
+@@ -33308,6 +33365,70 @@
                  createDeleteMessagesAlert(selectedObject, selectedObjectGroup, true);
                  break;
              }
@@ -168,7 +197,7 @@
              case OPTION_FORWARD: {
                  if (getMessagesController().isFrozen()) {
                      AccountFrozenAlert.show(currentAccount);
-@@ -33472,6 +33576,45 @@
+@@ -33472,6 +33593,45 @@
                  }
                  break;
              }
@@ -214,7 +243,7 @@
              case OPTION_SHARE: {
                  String path = selectedObject.messageOwner.attachPath;
                  if (path != null && path.length() > 0) {
-@@ -40605,8 +40748,11 @@
+@@ -40605,8 +40765,11 @@
  
          @Override
          public void didLongPress(ChatMessageCell cell, float x, float y) {
@@ -227,7 +256,7 @@
          }
  
          @Override
-@@ -45645,6 +45791,18 @@
+@@ -45645,6 +45808,18 @@
          final boolean isEphemeral = message.isEphemeral();
          final boolean isEphemeralFromBot = isEphemeral && !message.isOut();
  
@@ -246,7 +275,7 @@
  
          boolean allowChatActions = true;
          boolean allowPin;
-@@ -45707,6 +45865,15 @@
+@@ -45707,6 +45882,15 @@
              allowChatActions = false;
          }
  
@@ -262,7 +291,7 @@
          if (message.isSponsored() && !getUserConfig().isPremium() && !getMessagesController().premiumFeaturesBlocked() && !message.sponsoredCanReport) {
              items.add(LocaleController.getString(R.string.HideAd));
              options.add(OPTION_HIDE_SPONSORED_MESSAGE);
-@@ -46118,6 +46285,18 @@
+@@ -46118,6 +46302,18 @@
                      items.add(LocaleController.getString(R.string.Forward));
                      options.add(OPTION_FORWARD);
                      icons.add(R.drawable.msg_forward);
