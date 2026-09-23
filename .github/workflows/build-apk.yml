@@ -33,6 +33,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Setup Gradle and cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
@@ -105,7 +110,7 @@ jobs:
         working-directory: telegram
         run: |
           chmod +x gradlew
-          ./gradlew :TMessagesProj_App:assembleAfatDebug --stacktrace --no-daemon
+          ./gradlew :TMessagesProj_App:assembleAfatDebug --stacktrace --no-daemon --build-cache
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
 
